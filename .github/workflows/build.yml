@@ -1,0 +1,337 @@
+name: Build APK
+on:
+  push:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+      - name: Create project files
+        run: |
+          mkdir -p Seal5Ads && cd Seal5Ads
+          cat > settings.gradle <<'END_FILE_0'
+          pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
+          dependencyResolutionManagement { repositories { google(); mavenCentral() } }
+          rootProject.name = 'Seal5Ads'
+          include ':app'
+          END_FILE_0
+          cat > build.gradle <<'END_FILE_1'
+          plugins { id 'com.android.application' version '8.5.2' apply false }
+          END_FILE_1
+          cat > gradle.properties <<'END_FILE_2'
+          org.gradle.jvmargs=-Xmx2048m
+          android.useAndroidX=false
+          END_FILE_2
+          mkdir -p app
+          cat > app/build.gradle <<'END_FILE_3'
+          plugins { id 'com.android.application' }
+          android {
+              namespace 'com.seal5.ads'
+              compileSdk 34
+              defaultConfig {
+                  applicationId 'com.seal5.ads'
+                  minSdk 21
+                  targetSdk 34
+                  versionCode 1
+                  versionName '1.0'
+              }
+              buildTypes { release { minifyEnabled false } }
+              compileOptions { sourceCompatibility JavaVersion.VERSION_1_8; targetCompatibility JavaVersion.VERSION_1_8 }
+          }
+          END_FILE_3
+          mkdir -p app/src/main
+          cat > app/src/main/AndroidManifest.xml <<'END_FILE_4'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <application
+                  android:label="سيل ٥ للبيع"
+                  android:supportsRtl="true"
+                  android:theme="@android:style/Theme.Material.Light.NoActionBar">
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true"
+                      android:screenOrientation="sensorLandscape"
+                      android:configChanges="orientation|screenSize|keyboardHidden|screenLayout">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN"/>
+                          <category android:name="android.intent.category.LAUNCHER"/>
+                      </intent-filter>
+                      <!-- يظهر التطبيق كخيار شاشة رئيسية (Launcher) عند الضغط على زر Home -->
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN"/>
+                          <category android:name="android.intent.category.HOME"/>
+                          <category android:name="android.intent.category.DEFAULT"/>
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          END_FILE_4
+          mkdir -p app/src/main/java/com/seal5/ads
+          cat > app/src/main/java/com/seal5/ads/MainActivity.java <<'END_FILE_5'
+          package com.seal5.ads;
+
+          import android.app.Activity;
+          import android.content.Intent;
+          import android.net.Uri;
+          import android.os.Bundle;
+          import android.webkit.WebResourceRequest;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+
+          public class MainActivity extends Activity {
+              private WebView web;
+
+              @Override
+              protected void onCreate(Bundle b) {
+                  super.onCreate(b);
+                  web = new WebView(this);
+                  setContentView(web);
+                  WebSettings s = web.getSettings();
+                  s.setJavaScriptEnabled(true);
+                  s.setDomStorageEnabled(true); // لحفظ الإعلانات على الجهاز
+                  web.setWebViewClient(new WebViewClient() {
+                      @Override
+                      public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
+                          Uri u = r.getUrl();
+                          if ("file".equals(u.getScheme())) return false;
+                          try { startActivity(new Intent(Intent.ACTION_VIEW, u)); } catch (Exception e) { /* لا يوجد تطبيق للاتصال */ }
+                          return true;
+                      }
+                  });
+                  web.loadUrl("file:///android_asset/index.html");
+              }
+
+              @Override
+              public void onBackPressed() {
+                  if (web.canGoBack()) web.goBack(); else super.onBackPressed();
+              }
+          }
+          END_FILE_5
+          mkdir -p app/src/main/assets
+          cat > app/src/main/assets/index.html <<'END_FILE_6'
+          <!DOCTYPE html>
+          <html lang="ar" dir="rtl">
+          <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+          <title>سيل ٥ للبيع</title>
+          <style>
+          :root{--bg:#e7efeb;--sf:#fff;--sf2:#f3f8f5;--ink:#12231c;--mu:#5b6f66;--ln:#d3e0d9;--gr:#1fa463;--gd:#0e7a46;--rd:#d9344a;--on:#fff;
+          color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+          @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1814;--sf:#16241e;--sf2:#1c2d25;--ink:#e6f2ec;--mu:#9bb2a7;--ln:#2a3f35;--gr:#2fc27a;--gd:#2fc27a;--rd:#ff5a70;--on:#06130d;color-scheme:dark}}
+          :root[data-theme="dark"]{--bg:#0e1814;--sf:#16241e;--sf2:#1c2d25;--ink:#e6f2ec;--mu:#9bb2a7;--ln:#2a3f35;--gr:#2fc27a;--gd:#2fc27a;--rd:#ff5a70;--on:#06130d;color-scheme:dark}
+          html{scroll-padding-top:env(safe-area-inset-top,0px)}
+          *{box-sizing:border-box}
+          body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.6 "Readex Pro",Tahoma,system-ui,sans-serif;padding-bottom:84px}
+          main{max-width:520px;margin:0 auto;padding:16px}
+          button,input,select,textarea{font:inherit;color:inherit}
+          :focus-visible{outline:3px solid var(--gr);outline-offset:2px}
+          .hero{display:flex;align-items:center;gap:16px;background:var(--sf);border-radius:28px;padding:18px;border:1px solid var(--ln)}
+          .dial{position:relative;width:104px;height:104px;flex:none}
+          .dial svg{width:100%;height:100%;transform:rotate(135deg)}
+          .dial b{position:absolute;inset:0;display:grid;place-content:center;text-align:center;font-size:30px;line-height:1}
+          .dial small{display:block;font-size:11px;font-weight:400;color:var(--mu);margin-top:2px}
+          .hero h1{font-size:21px;margin:0 0 4px;line-height:1.35}
+          .hero p{margin:0;color:var(--mu);font-size:13px}
+          .tag{display:inline-block;background:var(--sf2);border:1px solid var(--ln);border-radius:8px;padding:1px 10px;font-size:12px;margin-top:8px}
+          .bar{display:flex;gap:10px;margin:14px 0}
+          .bar select{flex:1;background:var(--sf);border:1px solid var(--ln);border-radius:14px;padding:10px 12px}
+          .sw{display:flex;align-items:center;gap:8px;background:var(--sf);border:1px solid var(--ln);border-radius:14px;padding:0 12px;cursor:pointer;white-space:nowrap;font-size:13px}
+          .sw input{accent-color:var(--gr);width:18px;height:18px}
+          .card{background:var(--sf);border:1px solid var(--ln);border-radius:22px;padding:16px;margin-bottom:12px}
+          .top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+          .price{font-size:26px;font-weight:700;color:var(--gd);line-height:1.2}
+          .ok{background:var(--gr);color:var(--on);border-radius:999px;padding:3px 12px;font-size:12px;font-weight:600;white-space:nowrap}
+          .warn{background:var(--sf2);color:var(--rd);border:1px solid var(--rd);border-radius:999px;padding:3px 12px;font-size:12px;white-space:nowrap}
+          .card h3{margin:6px 0 2px;font-size:16px}
+          .meta{color:var(--mu);font-size:13px}
+          .chips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+          .chip{font-size:12px;border-radius:8px;padding:2px 10px;background:var(--sf2);border:1px solid var(--ln)}
+          .chip.no{color:var(--rd);border-color:var(--rd)}
+          .note{font-size:13px;margin:4px 0 10px}
+          .acts{display:flex;gap:8px}
+          .btn{flex:1;text-align:center;text-decoration:none;border:0;border-radius:14px;padding:11px;font-weight:600;cursor:pointer;background:var(--gr);color:var(--on)}
+          .btn.alt{background:var(--sf2);color:var(--ink);border:1px solid var(--ln)}
+          .empty{text-align:center;color:var(--mu);padding:32px 12px}
+          form{background:var(--sf);border:1px solid var(--ln);border-radius:28px;padding:18px}
+          form h2{margin:0 0 12px;font-size:19px}
+          .car{display:block;width:150px;margin:0 auto 4px}
+          .car .w{fill:var(--ln);transition:fill .2s}.car .w.on{fill:var(--gr)}
+          .car .d{fill:var(--ln);transition:fill .2s}.car .d.on{fill:var(--gr)}
+          .car .bd{fill:var(--sf2);stroke:var(--ink);stroke-width:2}
+          .car .gl{fill:var(--ln)}
+          .tg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+          .tg label{display:flex;align-items:center;gap:8px;background:var(--sf2);border:1px solid var(--ln);border-radius:14px;padding:9px 12px;cursor:pointer;font-size:13px}
+          .tg input{accent-color:var(--gr);width:18px;height:18px}
+          .f{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+          .f label{display:grid;gap:4px;font-size:13px;color:var(--mu)}
+          .f .full{grid-column:1/-1}
+          .f input,.f select,.f textarea{background:var(--sf2);border:1px solid var(--ln);border-radius:12px;padding:10px 12px;color:var(--ink);width:100%}
+          .err{color:var(--rd);font-size:13px;min-height:20px;margin:10px 0 4px}
+          form .btn{width:100%;padding:14px;font-size:16px}
+          nav{position:fixed;bottom:0;inset-inline:0;display:flex;background:var(--sf);border-top:1px solid var(--ln);padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px));gap:8px;justify-content:center}
+          nav button{flex:1;max-width:240px;border:0;background:none;border-radius:14px;padding:10px;font-weight:600;color:var(--mu);cursor:pointer}
+          nav button[aria-selected="true"]{background:var(--gr);color:var(--on)}
+          #toast{position:fixed;inset-inline:0;bottom:92px;margin:auto;width:max-content;max-width:90%;background:var(--ink);color:var(--bg);border-radius:14px;padding:10px 18px;opacity:0;pointer-events:none;transition:opacity .25s}
+          #toast.s{opacity:1}
+          @media (min-width:900px){main{max-width:1180px;padding:20px 28px}
+          .hero{padding:22px}.dial{width:128px;height:128px}.dial b{font-size:38px}.hero h1{font-size:26px}
+          #list{display:grid;grid-template-columns:1fr 1fr;gap:14px}#list .card{margin:0}
+          form{max-width:820px;margin:0 auto}.f{grid-template-columns:repeat(4,1fr)}.f .full{grid-column:1/-1}
+          .btn,nav button,.sw,.tg label{min-height:52px}nav button{font-size:17px}}
+          @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+          </style>
+          </head>
+          <body>
+          <main>
+          <section id="v-list">
+            <div class="hero">
+              <div class="dial">
+                <svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="44" fill="none" stroke="var(--ln)" stroke-width="7" stroke-dasharray="207 276" stroke-linecap="round"/><circle id="arc" cx="50" cy="50" r="44" fill="none" stroke="var(--rd)" stroke-width="7" stroke-dasharray="30 276" stroke-linecap="round"/></svg>
+                <b><span id="cnt">0</span><small>إعلان</small></b>
+              </div>
+              <div>
+                <h1>BYD سيل ٥ للبيع</h1>
+                <p>سيارات الفئة الاعتيادية، وكل إعلان يوضح حالتها بصراحة.</p>
+                <span class="tag">الفئة الاعتيادية</span>
+              </div>
+            </div>
+            <div class="bar">
+              <select id="city" aria-label="المحافظة"></select>
+              <label class="sw"><input type="checkbox" id="clean"> بدون مشاكل فقط</label>
+            </div>
+            <div id="list"></div>
+          </section>
+
+          <section id="v-add" hidden>
+            <form id="frm" novalidate>
+              <h2>انشر إعلان سيارتك</h2>
+              <svg class="car" viewBox="0 0 120 220" aria-hidden="true">
+                <rect class="w" id="w1" x="6" y="36" width="14" height="36" rx="5"/><rect class="w" id="w2" x="100" y="36" width="14" height="36" rx="5"/>
+                <rect class="w" id="w3" x="6" y="148" width="14" height="36" rx="5"/><rect class="w" id="w4" x="100" y="148" width="14" height="36" rx="5"/>
+                <rect class="bd" x="18" y="8" width="84" height="204" rx="38"/>
+                <path class="gl" d="M32 62q28-10 56 0l-4 26H36z"/><path class="gl" d="M36 150h48l4 22q-28 8-56 0z"/>
+                <circle class="d" id="dc" cx="60" cy="118" r="10"/><circle class="d" id="dp" cx="60" cy="34" r="7"/><circle class="d" id="db" cx="60" cy="196" r="7"/>
+              </svg>
+              <div class="tg" role="group" aria-label="حالة السيارة">
+                <label><input type="checkbox" name="ok" value="paint" checked> بدون صبغ</label>
+                <label><input type="checkbox" name="ok" value="crash" checked> بدون حوادث</label>
+                <label><input type="checkbox" name="ok" value="battery" checked> البطارية سليمة</label>
+                <label><input type="checkbox" name="ok" value="tires" checked> الإطارات سليمة</label>
+              </div>
+              <div class="f">
+                <label>السعر بالدولار<input id="price" type="number" inputmode="numeric" min="1" placeholder="مثال: 20000"></label>
+                <label>سنة الصنع<input id="year" type="number" inputmode="numeric" min="2020" max="2030" placeholder="2024"></label>
+                <label>المسافة بالكيلومتر<input id="km" type="number" inputmode="numeric" min="0" placeholder="15000"></label>
+                <label>اللون<input id="color" type="text" placeholder="أبيض"></label>
+                <label>المحافظة<select id="fcity"></select></label>
+                <label>رقم الهاتف<input id="phone" type="tel" inputmode="tel" placeholder="07xxxxxxxxx"></label>
+                <label class="full">ملاحظات<textarea id="notes" rows="3" placeholder="وكالة، فحص كامل، سبب البيع…"></textarea></label>
+              </div>
+              <div class="err" id="err" role="alert"></div>
+              <button class="btn" type="submit">انشر الإعلان</button>
+            </form>
+          </section>
+          </main>
+
+          <nav role="tablist">
+            <button role="tab" id="t-list" aria-selected="true">الإعلانات</button>
+            <button role="tab" id="t-add" aria-selected="false">انشر إعلانك</button>
+          </nav>
+          <div id="toast" role="status"></div>
+
+          <script>
+          const CITIES=['بغداد','البصرة','أربيل','النجف','الموصل','كربلاء','السليمانية','أخرى'];
+          const LBL={paint:'بدون صبغ',crash:'بدون حوادث',battery:'البطارية سليمة',tires:'الإطارات سليمة'};
+          const KEYS=Object.keys(LBL);
+          const all={paint:1,crash:1,battery:1,tires:1};
+          const SAMPLES=[
+           {id:'s1',price:21500,year:2024,km:9000,city:'بغداد',color:'أبيض',phone:'',notes:'إعلان تجريبي: وكالة وفحص كامل.',ok:all},
+           {id:'s2',price:19800,year:2024,km:24000,city:'البصرة',color:'رمادي',phone:'',notes:'إعلان تجريبي: صاحبها الأول.',ok:all},
+           {id:'s3',price:18200,year:2023,km:41000,city:'أربيل',color:'أسود',phone:'',notes:'إعلان تجريبي: صبغ بسيط في الصدام.',ok:{paint:0,crash:1,battery:1,tires:1}}
+          ];
+          let mine=[];
+          try{mine=JSON.parse(localStorage.getItem('seal5-ads')||'[]')}catch(e){mine=[]}
+          const $=id=>document.getElementById(id);
+          const fill=(el,first)=>{el.innerHTML=(first?'<option value="">كل المحافظات</option>':'')+CITIES.map(c=>'<option>'+c+'</option>').join('')};
+          fill($('city'),true);fill($('fcity'),false);
+
+          function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+          function num(n){return Number(n).toLocaleString('en-US')}
+          function phoneDigits(p){let d=String(p).replace(/\D/g,'');if(d.startsWith('0'))d='964'+d.slice(1);return d}
+
+          function render(){
+            const data=[...mine,...SAMPLES];
+            const c=$('city').value,cl=$('clean').checked;
+            const rows=data.filter(a=>(!c||a.city===c)&&(!cl||KEYS.every(k=>a.ok[k])));
+            $('cnt').textContent=data.length;
+            $('arc').setAttribute('stroke-dasharray',(Math.min(data.length/12,1)*207+8).toFixed(0)+' 276');
+            $('list').innerHTML=rows.length?rows.map(a=>{
+              const clean=KEYS.every(k=>a.ok[k]);
+              const d=phoneDigits(a.phone||'');
+              return '<article class="card"><div class="top"><div class="price">$'+num(a.price)+'</div>'+
+                (clean?'<span class="ok">بدون مشاكل</span>':'<span class="warn">فيها ملاحظات</span>')+'</div>'+
+                '<h3>BYD سيل ٥ اعتيادي ‎'+a.year+'</h3>'+
+                '<div class="meta">'+esc(a.city)+' · '+num(a.km)+' كم · '+esc(a.color||'')+'</div>'+
+                '<div class="chips">'+KEYS.map(k=>'<span class="chip'+(a.ok[k]?'':' no')+'">'+(a.ok[k]?LBL[k]:'يوجد: '+LBL[k].replace('بدون ','').replace(' سليمة',''))+'</span>').join('')+'</div>'+
+                (a.notes?'<p class="note">'+esc(a.notes)+'</p>':'')+
+                (d?'<div class="acts"><a class="btn" href="tel:+'+d+'">اتصل</a><a class="btn alt" href="https://wa.me/'+d+'" target="_blank" rel="noopener">واتساب</a></div>':'')+
+                '</article>';
+            }).join(''):'<div class="empty">ما كو إعلانات بهذا الفلتر. غيّر المحافظة أو انشر إعلانك.</div>';
+          }
+
+          function show(tab){
+            $('v-list').hidden=tab!=='list';$('v-add').hidden=tab!=='add';
+            $('t-list').setAttribute('aria-selected',tab==='list');$('t-add').setAttribute('aria-selected',tab==='add');
+            window.scrollTo(0,0);
+          }
+          function toast(m){const t=$('toast');t.textContent=m;t.classList.add('s');setTimeout(()=>t.classList.remove('s'),2200)}
+
+          function sync(){
+            const on=v=>document.querySelector('input[name=ok][value='+v+']').checked;
+            $('dp').classList.toggle('on',on('paint'));$('dc').classList.toggle('on',on('crash'));$('db').classList.toggle('on',on('battery'));
+            ['w1','w2','w3','w4'].forEach(i=>$(i).classList.toggle('on',on('tires')));
+          }
+          document.querySelectorAll('input[name=ok]').forEach(i=>i.addEventListener('change',sync));sync();
+
+          $('city').onchange=$('clean').onchange=render;
+          $('t-list').onclick=()=>show('list');$('t-add').onclick=()=>show('add');
+
+          $('frm').addEventListener('submit',e=>{
+            e.preventDefault();
+            const price=+$('price').value,year=+$('year').value,km=+$('km').value,phone=$('phone').value.trim();
+            const err=$('err');
+            if(!price||price<1){err.textContent='اكتب السعر بالدولار.';return}
+            if(!year||year<2020||year>2030){err.textContent='اكتب سنة الصنع بين 2020 و2030.';return}
+            if(!$('km').value||km<0){err.textContent='اكتب المسافة المقطوعة بالكيلومتر.';return}
+            if(phoneDigits(phone).length<10){err.textContent='اكتب رقم هاتف صحيح حتى يتواصل معك المشتري.';return}
+            err.textContent='';
+            const ok={};document.querySelectorAll('input[name=ok]').forEach(i=>ok[i.value]=i.checked?1:0);
+            mine.unshift({id:'m'+Date.now(),price,year,km,city:$('fcity').value,color:$('color').value.trim(),phone,notes:$('notes').value.trim(),ok});
+            try{localStorage.setItem('seal5-ads',JSON.stringify(mine))}catch(x){}
+            $('frm').reset();sync();$('city').value='';$('clean').checked=false;
+            render();show('list');toast('تم نشر الإعلان');
+          });
+          render();
+          </script>
+          </body>
+          </html>
+          END_FILE_6
+      - name: Build
+        working-directory: Seal5Ads
+        run: gradle assembleDebug
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1
+          name: Seal 5 APK
+          files: Seal5Ads/app/build/outputs/apk/debug/app-debug.apk
